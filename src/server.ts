@@ -1,29 +1,41 @@
 import express, { Application } from 'express'
 import path from 'path'
+import { createServer } from 'http'
+import { Server } from 'socket.io'
+import dotenv from 'dotenv'
 import cors from 'cors'
 import morgan from 'morgan'
+import { socketsControllers } from './sockets/controllers'
+import {
+  ClientToServerEvents,
+  InterServerEvents,
+  ServerToClientEvents,
+  SocketData
+} from './interfaces/socket'
+dotenv.config()
 
-class Server {
-  constructor(
-    private app: Application = express(),
-    private port: string = process.env.PORT || '3000'
-  ) {
-    this.middleware()
-  }
+export const upServer = () => {
+  const app: Application = express()
 
-  // Middleware
-  private middleware() {
-    this.app.use(cors())
-    this.app.use(express.json())
-    this.app.use(morgan('dev'))
-    this.app.use(express.static(path.join(__dirname, '../public')))
-  }
+  const PORT = process.env.PORT || 3000
 
-  listen() {
-    this.app.listen(this.port, () =>
-      console.log(`✔ server on port: ${this.port}`)
-    )
-  }
+  // Middleware functions
+  app.use(cors())
+  app.use(morgan('dev'))
+  app.use(express.static(path.join(__dirname, '../public')))
+
+  // Create socket server
+  const server = createServer(app)
+  const io = new Server<
+    ClientToServerEvents,
+    ServerToClientEvents,
+    InterServerEvents,
+    SocketData
+  >(server)
+
+  // Listen for connections
+  //io.on('connect', socketsControllers)
+  io.on('connect', socketsControllers)
+  // Run server
+  server.listen(PORT, () => console.log(`✔ Server started on port: ${PORT}`))
 }
-
-export default Server
